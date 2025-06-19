@@ -30,6 +30,14 @@ let duracaoCarta = 4000; // 4 segundos em milissegundos
 // FIM NOVAS VARIÁVEIS
 // ===================================
 
+// ===================================
+// NOVA VARIÁVEL PARA O POÇO DE ÁGUA
+// ===================================
+let pocoDeAgua;
+// ===================================
+// FIM NOVA VARIÁVEL
+// ===================================
+
 
 function setup() {
   createCanvas(600, 400);
@@ -44,6 +52,14 @@ function setup() {
   jardineiro.inventario.adicionarItem(new Semente('Semente de Flor', '🌸'));
   jardineiro.inventario.adicionarItem(new Pazinha()); // Adiciona uma pá
   jardineiro.inventario.adicionarItem(new Fertilizante()); // Adiciona fertilizante
+
+  // ===================================
+  // INSTANCIA O POÇO DE ÁGUA NO SETUP
+  // ===================================
+  pocoDeAgua = new PocoDeAgua(width - 100, height - 70); // Posição do poço (exemplo: canto inferior direito)
+  // ===================================
+  // FIM INSTANCIAÇÃO
+  // ===================================
 }
 
 function draw() {
@@ -54,6 +70,14 @@ function draw() {
   // Desenha o chão
   fill(139, 69, 19); // Cor de terra
   rect(0, height - 80, width, 80);
+
+  // ===================================
+  // MOSTRA O POÇO DE ÁGUA NO DRAW
+  // ===================================
+  pocoDeAgua.mostrar();
+  // ===================================
+  // FIM MOSTRAR POÇO
+  // ===================================
 
   mostrarInformacoes();
 
@@ -85,7 +109,7 @@ function draw() {
   }
 
   // Mostra o inventário na tela
-  jardineiro.inventario.mostrar(10, 100); // Posição para mostrar o inventário
+  jardineiro.inventario.mostrar(10, 170); // Posição para mostrar o inventário
 
   // ===================================
   // LÓGICA DO CAMINHÃO
@@ -155,6 +179,13 @@ function mostrarInformacoes() {
   text("1-9: Selecionar Item", 95, 90);
   text("E: Usar Item", 65, 110);
   text("E com Pá: Desenterrar/Colher", 130, 130);
+  // ===================================
+  // INSTRUÇÃO PARA O POÇO DE ÁGUA
+  // ===================================
+  text("P: Encher Água (Poço)", 105, 150);
+  // ===================================
+  // FIM INSTRUÇÃO
+  // ===================================
 }
 
 // Classe que cria o jardineiro
@@ -165,6 +196,11 @@ class Jardineiro {
     this.emoji = '👨‍🌾';
     this.velocidade = 3;
     this.inventario = new Inventario(5); // Inventário com 5 slots
+    // É importante inicializar o dinheiro aqui se o jardineiro for responsável por ele
+    // Ou garantir que a variável global 'dinheiro' seja acessível e manipulada.
+    // Como 'dinheiro' já é global, não precisamos de 'this.dinheiro' aqui,
+    // mas se fosse para ser uma propriedade do jardineiro, seria assim:
+    // this.dinheiro = 0;
   }
 
   atualizar() {
@@ -254,8 +290,6 @@ function keyPressed() {
 
         if (plantaMaisProxima) {
           if (plantaMaisProxima.temFruto) {
-            // **ALTERAÇÃO**: Ao colher, o fruto NÃO vai mais para o inventário
-            // jardineiro.inventario.adicionarItem(new Fruto('Maçã', '🍎'));
             plantaMaisProxima.colherFruto(); // Reseta o estado de ter fruto na árvore
             console.log("Fruto colhido da árvore!");
 
@@ -269,7 +303,7 @@ function keyPressed() {
             // Para este cenário, vamos simular a "venda" ao colher.
             let frutoNoInventario = jardineiro.inventario.slots.find(item => item && item.tipo === 'fruto');
             if (frutoNoInventario) {
-                jardineiro.inventario.removerItem(frutoNoInventario);
+              jardineiro.inventario.removerItem(frutoNoInventario);
             }
 
             dinheiro += 2.00; // Adiciona R$ 2,00
@@ -319,6 +353,22 @@ function keyPressed() {
       console.log("Nenhum item selecionado para usar.");
     }
   }
+
+  // ===================================
+  // LÓGICA DE INTERAÇÃO COM O POÇO DE ÁGUA
+  // ===================================
+  if (key === 'p' || key === 'P') {
+    // Certifique-se de que a variável 'pocoDeAgua' está instanciada
+    if (pocoDeAgua && pocoDeAgua.estaPerto(jardineiro)) {
+      aguaDisponivel = capacidadeMaximaAgua; // Enche a água do jardineiro ao máximo
+      console.log("Água do jardineiro recarregada!");
+    } else {
+      console.log("Você precisa estar mais perto do poço de água para recarregar!");
+    }
+  }
+  // ===================================
+  // FIM LÓGICA DO POÇO DE ÁGUA
+  // ===================================
 }
 
 
@@ -491,15 +541,15 @@ class Inventario {
     }
     return false;
   }
-  
+
   // Novo método para remover o primeiro fruto encontrado
   removerPrimeiroFruto() {
     for (let i = 0; i < this.capacidade; i++) {
-        if (this.slots[i] && this.slots[i].tipo === 'fruto') {
-            this.slots[i] = null;
-            console.log("Um fruto foi removido do inventário.");
-            return true;
-        }
+      if (this.slots[i] && this.slots[i].tipo === 'fruto') {
+        this.slots[i] = null;
+        console.log("Um fruto foi removido do inventário.");
+        return true;
+      }
     }
     return false;
   }
@@ -547,8 +597,11 @@ class Inventario {
       fill(0);
       text(i + 1, slotX + slotSize - 10, slotY + slotSize - 5);
     }
-   // ===================================
-// NOVA CLASSE PARA A LOJA
+  }
+}
+
+// ===================================
+// NOVA CLASSE PARA A LOJA (MANTIDA DO SEU CÓDIGO)
 // ===================================
 class Loja {
   constructor(x, y) {
@@ -640,9 +693,13 @@ class Loja {
     let produtoParaComprar = this.itensAVenda.find(p => p.item === this.itemSelecionadoLoja);
 
     if (produtoParaComprar) {
-      if (jardineiro.dinheiro >= produtoParaComprar.preco) {
+      // Nota: 'jardineiro.dinheiro' não existe na classe Jardineiro que você forneceu.
+      // Você está usando a variável global 'dinheiro'.
+      // Para o código funcionar, você precisará ajustar para 'dinheiro' ou adicionar 'this.dinheiro' ao Jardineiro.
+      // Assumindo que 'dinheiro' é global como no restante do seu código:
+      if (dinheiro >= produtoParaComprar.preco) {
         if (jardineiro.inventario.adicionarItem(produtoParaComprar.item)) {
-          jardineiro.dinheiro -= produtoParaComprar.preco;
+          dinheiro -= produtoParaComprar.preco; // Usa a variável global 'dinheiro'
           console.log(`Você comprou ${produtoParaComprar.item.nome} por R$ ${produtoParaComprar.preco.toFixed(2)}.`);
         } else {
           console.log("Inventário cheio! Não é possível comprar.");
@@ -655,14 +712,38 @@ class Loja {
 }
 // ===================================
 // FIM NOVA CLASSE PARA A LOJA
-// =================================== 
-    
-    
-    
-    
-    
-    
-    
-    
+// ===================================
+
+
+// --- NOVO CÓDIGO: CLASSE POÇO DE ÁGUA ---
+// ===================================
+// NOVA CLASSE PARA O POÇO DE ÁGUA
+// ===================================
+class PocoDeAgua {
+  constructor(x, y) {
+    this.x = x;
+    this.y = y;
+    this.emoji = '💧'; // Emoji de uma gota ou poço
+    this.alcanceInteracao = 80; // Distância para o jardineiro interagir com o poço
+  }
+
+  // Método para mostrar o poço na tela
+  mostrar() {
+    textSize(40); // Tamanho maior para o emoji do poço
+    text(this.emoji, this.x, this.y);
+    // Opcional: Desenhar um círculo ou outra forma para o poço
+    noFill();
+    stroke(0, 100, 200, 150); // Azul semi-transparente
+    strokeWeight(2);
+    ellipse(this.x, this.y, 60); // Desenha um círculo ao redor do poço
+  }
+
+  // Método para verificar se o jardineiro está perto do poço
+  estaPerto(jardineiro) {
+    let distancia = dist(jardineiro.x, jardineiro.y, this.x, this.y);
+    return distancia < this.alcanceInteracao;
   }
 }
+// ===================================
+// FIM NOVA CLASSE POÇO DE ÁGUA
+// ===================================
